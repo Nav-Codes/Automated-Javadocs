@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "automated-javadocs.helloWorld",
-        "title": "Hello World"
+        "command": "automated-javadocs.scanJavaMethods",
+        "title": "Print Java Methods"
       }
     ]
   },
