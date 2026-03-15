@@ -155,11 +155,13 @@ How to Use
 
 2. Wait until it says something like "Java: Ready" in the bottom left corner
 
-It will initially look like this: 
-![java-activating](images/java-activating-left.png)
+    It will initially look like this: 
 
-After the RedHat extensions have been initialized, it will look something like this:
-![java-ready](images/java-ready-left.png)
+    ![java-activating](images/java-activating-left.png)
+
+    After the RedHat extensions have been initialized, it will look something like this:
+
+    ![java-ready](images/java-ready-left.png)
 
 3.  Open the command palette:
     - `Ctrl + Shift + P`
