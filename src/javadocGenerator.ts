@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { buildSignature, type MethodInfo } from './openai';
+import { type MethodDocItem, buildSignature, type MethodInfo } from './openai';
 
 export type JavadocInsertEdit = {
 	position: vscode.Position;
@@ -10,7 +10,7 @@ export type JavadocInsertEdit = {
 export function buildJavadocEdits(
 	doc: vscode.TextDocument,
 	methodInfos: MethodInfo[],
-	descriptionMap: Map<string, string>,
+	descriptionMap: Map<string, MethodDocItem>,
 	output?: vscode.OutputChannel
 ): JavadocInsertEdit[] {
 	const edits: JavadocInsertEdit[] = [];
@@ -22,8 +22,8 @@ export function buildJavadocEdits(
 		}
 
 		const signature = buildSignature(info);
-		const description = descriptionMap.get(signature) ?? fallbackDescription(info);
-		const javadoc = generateJavadoc(info, description);
+		const docItem = descriptionMap.get(signature) ?? fallbackDescription(info);
+		const javadoc = generateJavadoc(info, docItem);
 
 		edits.push({
 			position: new vscode.Position(info.insertLine, 0),
@@ -70,22 +70,30 @@ export function hasJavadocAbove(
 	return false;
 }
 
-export function generateJavadoc(info: MethodInfo, description: string): string {
+export function generateJavadoc(info: MethodInfo, docItem: MethodDocItem): string {
 	const lines: string[] = [];
 
 	lines.push(`${info.indent}/**`);
-	lines.push(`${info.indent} * ${description}`);
+	lines.push(`${info.indent} * ${docItem.description}`);
 
 	for (const param of info.params) {
-		lines.push(`${info.indent} * @param ${param.name} TODO`);
+		const paramDescription =
+			docItem.params.find((p) => p.name === param.name)?.description ?? 'TODO';
+
+		lines.push(`${info.indent} * @param ${param.name} ${paramDescription}`);
 	}
 
 	if (!info.isConstructor && info.returnType && info.returnType !== 'void') {
-		lines.push(`${info.indent} * @return TODO`);
+		lines.push(
+			`${info.indent} * @return ${docItem.returnDescription ?? 'TODO'}`
+		);
 	}
 
 	for (const exceptionName of info.throws) {
-		lines.push(`${info.indent} * @throws ${exceptionName} TODO`);
+		const throwsDescription =
+			docItem.throws.find((t) => t.type === exceptionName)?.description ?? 'TODO';
+
+		lines.push(`${info.indent} * @throws ${exceptionName} ${throwsDescription}`);
 	}
 
 	lines.push(`${info.indent} */`);
@@ -94,10 +102,24 @@ export function generateJavadoc(info: MethodInfo, description: string): string {
 	return lines.join('\n');
 }
 
-export function fallbackDescription(info: MethodInfo): string {
-	if (info.isConstructor) {
-		return `Creates a new ${info.name} instance.`;
-	}
 
-	return `Executes ${info.name}.`;
+export function fallbackDescription(info: MethodInfo): MethodDocItem {
+	return {
+		signature: buildSignature(info),
+		description: info.isConstructor
+			? `Creates a new ${info.name} instance.`
+			: `Executes ${info.name}.`,
+		params: info.params.map((p) => ({
+			name: p.name,
+			description: 'the input value'
+		})),
+		returnDescription:
+			!info.isConstructor && info.returnType && info.returnType !== 'void'
+				? 'the result'
+				: null,
+		throws: info.throws.map((t) => ({
+			type: t,
+			description: 'an exception if an error occurs'
+		}))
+	};
 }

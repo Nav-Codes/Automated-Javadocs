@@ -13,9 +13,22 @@ export type MethodInfo = {
 	insertLine: number;
 };
 
-type MethodDescriptionItem = {
+export type ParamDescriptionItem = {
+	name: string;
+	description: string;
+};
+
+export type ThrowsDescriptionItem = {
+	type: string;
+	description: string;
+};
+
+export type MethodDocItem = {
 	signature: string;
 	description: string;
+	params: ParamDescriptionItem[];
+	returnDescription: string | null;
+	throws: ThrowsDescriptionItem[];
 };
 
 export async function getMethodDescriptionsFromAI(
@@ -23,7 +36,7 @@ export async function getMethodDescriptionsFromAI(
 	methodInfos: MethodInfo[],
 	apiKey: string,
 	model: string
-): Promise<Map<string, string>> {
+): Promise<Map<string, MethodDocItem>> {
 	const prompt = buildMethodDescriptionPrompt(javaSource, methodInfos);
 
 	const response = await fetch('https://api.openai.com/v1/responses', {
@@ -41,7 +54,7 @@ export async function getMethodDescriptionsFromAI(
 						{
 							type: 'input_text',
 							text:
-								'You analyze Java code and produce concise, accurate one-sentence method and constructor descriptions.'
+								'You analyze Java code and produce concise, accurate Javadoc-ready descriptions for methods and constructors.'
 						}
 					]
 				},
@@ -58,7 +71,7 @@ export async function getMethodDescriptionsFromAI(
 			text: {
 				format: {
 					type: 'json_schema',
-					name: 'method_descriptions',
+					name: 'method_docs',
 					schema: {
 						type: 'object',
 						additionalProperties: false,
@@ -70,9 +83,42 @@ export async function getMethodDescriptionsFromAI(
 									additionalProperties: false,
 									properties: {
 										signature: { type: 'string' },
-										description: { type: 'string' }
+										description: { type: 'string' },
+										params: {
+											type: 'array',
+											items: {
+												type: 'object',
+												additionalProperties: false,
+												properties: {
+													name: { type: 'string' },
+													description: { type: 'string' }
+												},
+												required: ['name', 'description']
+											}
+										},
+										returnDescription: {
+											type: ['string', 'null']
+										},
+										throws: {
+											type: 'array',
+											items: {
+												type: 'object',
+												additionalProperties: false,
+												properties: {
+													type: { type: 'string' },
+													description: { type: 'string' }
+												},
+												required: ['type', 'description']
+											}
+										}
 									},
-									required: ['signature', 'description']
+									required: [
+										'signature',
+										'description',
+										'params',
+										'returnDescription',
+										'throws'
+									]
 								}
 							}
 						},
@@ -96,7 +142,7 @@ export async function getMethodDescriptionsFromAI(
 		throw new Error('OpenAI API returned no output text.');
 	}
 
-	return parseMethodDescriptions(text);
+	return parseMethodDocs(text);
 }
 
 export function buildSignature(info: MethodInfo): string {
@@ -121,23 +167,34 @@ function buildMethodDescriptionPrompt(
 	const expectedSignatures = methodInfos.map(buildSignature).join('\n');
 
 	return `
-Analyze the Java file below.
+Analyze the Java file below and generate Javadoc-ready descriptions.
 
-Write exactly one concise sentence for each method and constructor.
-Use the full file for context.
-Be factual and specific.
-Do not include markdown.
-Do not include any text outside the required JSON structure.
-
-Return descriptions only for these signatures:
+Return documentation only for these signatures:
 ${expectedSignatures}
 
+For each signature, return:
+- "description": exactly one concise sentence describing what the method or constructor does
+- "params": one item for each parameter, with:
+  - "name": the exact parameter name
+  - "description": exactly one concise sentence fragment or short sentence describing that parameter's purpose
+- "returnDescription": exactly one concise sentence fragment or short sentence describing the return value, or null if the method is a constructor or returns void
+- "throws": one item for each declared exception, with:
+  - "type": the exact declared exception type
+  - "description": exactly one concise sentence fragment or short sentence explaining when it is thrown
+
 Rules:
-- Keep each description to one sentence.
-- End each description with a period.
+- Use the full Java file for context.
+- Be factual and specific.
+- Do not include markdown.
+- Do not include extra commentary.
 - Preserve the exact signature text.
 - Include every listed signature exactly once.
 - Do not invent extra signatures.
+- If a method has no parameters, return an empty params array.
+- If a method is a constructor or returns void, return null for returnDescription.
+- If a method declares no exceptions, return an empty throws array.
+- Parameter names in params must exactly match the source code.
+- Exception types in throws must exactly match the declared throws clause.
 
 Java file:
 \`\`\`java
@@ -173,25 +230,42 @@ function extractOutputText(data: any): string {
 	return '';
 }
 
-function parseMethodDescriptions(content: string): Map<string, string> {
-	const parsed = JSON.parse(content) as { items: MethodDescriptionItem[] };
+function parseMethodDocs(content: string): Map<string, MethodDocItem> {
+	const parsed = JSON.parse(content) as { items: MethodDocItem[] };
 
 	if (!parsed || !Array.isArray(parsed.items)) {
 		throw new Error('AI response did not match expected JSON schema.');
 	}
 
-	const result = new Map<string, string>();
+	const result = new Map<string, MethodDocItem>();
 
 	for (const item of parsed.items) {
 		if (
 			!item ||
 			typeof item.signature !== 'string' ||
-			typeof item.description !== 'string'
+			typeof item.description !== 'string' ||
+			!Array.isArray(item.params) ||
+			(item.returnDescription !== null &&
+				typeof item.returnDescription !== 'string') ||
+			!Array.isArray(item.throws)
 		) {
 			throw new Error(`Invalid item in AI response: ${JSON.stringify(item)}`);
 		}
 
-		result.set(item.signature, item.description.trim());
+		result.set(item.signature, {
+			signature: item.signature,
+			description: item.description.trim(),
+			params: item.params.map((p) => ({
+				name: p.name,
+				description: p.description.trim()
+			})),
+			returnDescription:
+				item.returnDescription === null ? null : item.returnDescription.trim(),
+			throws: item.throws.map((t) => ({
+				type: t.type,
+				description: t.description.trim()
+			}))
+		});
 	}
 
 	return result;
