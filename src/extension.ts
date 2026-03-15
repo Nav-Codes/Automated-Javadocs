@@ -1,40 +1,12 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as dotenv from 'dotenv';
 
-import { getMethodDescriptionsFromAI } from './openai';
+import { getMethodDescriptionsFromBackend } from './backend';
 import { buildJavadocEdits } from './javadocGenerator';
 import { extractMethodInfos, getJavaMembers } from './javaParser';
-
-const API_KEY_SECRET = 'openaiApiKey';
 
 export function activate(context: vscode.ExtensionContext) {
 	const output = vscode.window.createOutputChannel('Automated Javadocs');
 	context.subscriptions.push(output);
-
-	const envPath = path.join(context.extensionPath, '.env');
-	const result = dotenv.config({ path: envPath });
-
-	if (result.error) {
-		console.log('dotenv failed to load.');
-	} else {
-		console.log('.env loaded from:', envPath);
-	}
-
-	const setApiKeyCommand = vscode.commands.registerCommand(
-		'automated-javadocs.setApiKey',
-		async () => {
-			const apiKey = process.env.OPENAI_API_KEY;
-
-			if (!apiKey) {
-				vscode.window.showErrorMessage('OPENAI_API_KEY was not found in .env');
-				return;
-			}
-
-			await context.secrets.store(API_KEY_SECRET, apiKey);
-			vscode.window.showInformationMessage('OpenAI API key saved securely.');
-		}
-	);
 
 	const injectAiJavadocsCommand = vscode.commands.registerCommand(
 		'automated-javadocs.injectJavadocs',
@@ -51,19 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 				if (doc.languageId !== 'java') {
 					vscode.window.showWarningMessage('Open a Java file first.');
-					return;
-				}
-
-				const apiKey = await context.secrets.get(API_KEY_SECRET);
-				if (!apiKey) {
-					const choice = await vscode.window.showWarningMessage(
-						'OpenAI API key not set.',
-						'Set API Key'
-					);
-
-					if (choice === 'Set API Key') {
-						await vscode.commands.executeCommand('automated-javadocs.setApiKey');
-					}
 					return;
 				}
 
@@ -90,16 +49,15 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 
 				const javaSource = doc.getText();
-				output.appendLine('Requesting one-sentence method descriptions from OpenAI...');
+				output.appendLine('Requesting Javadoc descriptions from backend...');
 
-				const descriptionMap = await getMethodDescriptionsFromAI(
+				const descriptionMap = await getMethodDescriptionsFromBackend(
 					javaSource,
 					methodInfos,
-					apiKey,
 					getConfiguredModel()
 				);
 
-				output.appendLine(`Received ${descriptionMap.size} method descriptions from AI.`);
+				output.appendLine(`Received ${descriptionMap.size} method descriptions from backend.`);
 
 				const edits = buildJavadocEdits(doc, methodInfos, descriptionMap, output);
 
@@ -131,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	);
 
-	context.subscriptions.push(setApiKeyCommand, injectAiJavadocsCommand);
+	context.subscriptions.push(injectAiJavadocsCommand);
 }
 
 export function deactivate() {}

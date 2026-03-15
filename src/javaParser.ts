@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { MethodInfo, ParamInfo } from './openai';
+import type { MethodInfo, ParamInfo } from './backend';
 
 export type JavaMember = {
 	name: string;

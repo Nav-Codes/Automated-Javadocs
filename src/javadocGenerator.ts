@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { type MethodDocItem, buildSignature, type MethodInfo } from './openai';
+import { type MethodDocItem, buildSignature, type MethodInfo } from './backend';
 
 export type JavadocInsertEdit = {
 	position: vscode.Position;
