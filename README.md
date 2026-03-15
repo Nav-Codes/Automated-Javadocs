@@ -19,7 +19,12 @@ And generates documentation including:
 - `@return` descriptions
 - `@throws` descriptions
 
-#
+# Demo video
+
+Here is a link to the demo of this extension
+
+https://youtu.be/oiPKy4F0CKA 
+
 
 # Features
 
@@ -147,11 +152,19 @@ How to Use
 ==========
    
 1.  Open a Java file in VS Code
-    
-2.  Open the command palette:
+
+2. Wait until it says something like "Java: Ready" in the bottom left corner
+
+It will initially look like this: 
+![java-activating](images/java-activating-left.png)
+
+After the RedHat extensions have been initialized, it will look something like this:
+![java-ready](images/java-ready-left.png)
+
+3.  Open the command palette:
     - `Ctrl + Shift + P`
 
-1.  Run:
+4.  Run:
     - `Automated Javadocs: Inject Javadocs`
 
 The extension will:
