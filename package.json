@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "automated-javadocs.scanJavaMethods",
-        "title": "Print Java Methods"
+        "command": "automated-javadocs.scanWithSymbols",
+        "title": "Add Javadocs"
       }
     ]
   },

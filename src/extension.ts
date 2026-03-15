@@ -1,92 +1,115 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+	const output = vscode.window.createOutputChannel('Automated Javadocs');
+	context.subscriptions.push(output);
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "automated-javadocs" is now active!');
+	const disposable = vscode.commands.registerCommand(
+		'automated-javadocs.scanWithSymbols',
+		async () => {
+			const editor = vscode.window.activeTextEditor;
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	// const disposable = vscode.commands.registerCommand('automated-javadocs.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		// vscode.window.showInformationMessage('Say hi to urmom for me');
-	// });
+			if (!editor) {
+				vscode.window.showWarningMessage('No active editor found.');
+				return;
+			}
 
-	const methodScanner = vscode.commands.registerCommand('automated-javadocs.scanJavaMethods', () => {
-		const editor = vscode.window.activeTextEditor;
+			const doc = editor.document;
+			output.clear();
+			output.show(true);
 
-		if (!editor) {
-			vscode.window.showWarningMessage('No active editor found.');
-			return;
+			output.appendLine(`file: ${doc.fileName}`);
+			output.appendLine(`languageId: ${doc.languageId}`);
+
+			const javaExt = vscode.extensions.getExtension('redhat.java');
+			output.appendLine(`redhat.java installed: ${!!javaExt}`);
+
+			if (doc.languageId !== 'java') {
+				vscode.window.showWarningMessage(`This file is not detected as Java. languageId=${doc.languageId}`);
+				return;
+			}
+
+			if (javaExt && !javaExt.isActive) {
+				output.appendLine('Activating redhat.java...');
+				await javaExt.activate();
+			}
+
+			// small delay can help if Java is still warming up
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+
+			const symbols = await vscode.commands.executeCommand<
+				(vscode.DocumentSymbol | vscode.SymbolInformation)[]
+			>('vscode.executeDocumentSymbolProvider', doc.uri);
+
+			output.appendLine(`raw symbols returned: ${symbols ? symbols.length : 0}`);
+			output.appendLine(JSON.stringify(symbols, null, 2));
+
+			if (!symbols || symbols.length === 0) {
+				vscode.window.showWarningMessage('No symbols returned. Check Output panel.');
+				return;
+			}
+
+			const results = collectMethodAndConstructorSymbols(symbols);
+
+			output.appendLine('');
+			output.appendLine(`methods/constructors found: ${results.length}`);
+			for (const r of results) {
+				output.appendLine(`${r.kind}: ${r.name} @ line ${r.line + 1}`);
+			}
+
+			vscode.window.showInformationMessage(
+				`Found ${results.length} methods/constructors.`
+			);
 		}
+	);
 
-		if (editor.document.languageId !== 'java') {
-			vscode.window.showWarningMessage('Open a Java file first.');
-			return;
-		}
-
-		const text = editor.document.getText();
-		const methodNames = findJavaMethods(text);
-
-		if (methodNames.length === 0) {
-			vscode.window.showInformationMessage('No Java methods found.');
-			console.log('No Java methods found.');
-			return;
-		}
-
-		console.log('Detected Java methods/constructors:');
-		for (const name of methodNames) {
-			console.log(name);
-		}
-
-		vscode.window.showInformationMessage(
-			`Found ${methodNames.length} method(s)/constructor(s). Check the debug console.`
-		);
-	});
-
-	// context.subscriptions.push(disposable);
-	context.subscriptions.push(methodScanner);
+	context.subscriptions.push(disposable);
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() { }
+function collectMethodAndConstructorSymbols(
+	symbols: (vscode.DocumentSymbol | vscode.SymbolInformation)[]
+): Array<{ name: string; kind: 'method' | 'constructor'; line: number }> {
+	const results: Array<{ name: string; kind: 'method' | 'constructor'; line: number }> = [];
 
-function findJavaMethods(sourceCode: string): string[] {
-	const names: string[] = [];
+	function visit(symbol: vscode.DocumentSymbol | vscode.SymbolInformation) {
+		if ('children' in symbol) {
+			if (symbol.kind === vscode.SymbolKind.Method) {
+				results.push({
+					name: symbol.name,
+					kind: 'method',
+					line: symbol.selectionRange.start.line
+				});
+			} else if (symbol.kind === vscode.SymbolKind.Constructor) {
+				results.push({
+					name: symbol.name,
+					kind: 'constructor',
+					line: symbol.selectionRange.start.line
+				});
+			}
 
-	/*
-		This regex tries to match:
-		- optional annotations
-		- optional access/static/final/etc modifiers
-		- optional generic return type
-		- return type
-		- method/constructor name
-		- parameter list
-		- opening brace
-
-		It is intentionally simple for a first pass.
-	*/
-	const methodRegex =
-		/(?:@\w+(?:\([^)]*\))?\s*)*(?:(?:public|private|protected|static|final|synchronized|abstract|native|strictfp)\s+)*(?:<[^>]+>\s+)?(?:[\w\[\]<>.,?]+\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\([^;{}]*\)\s*(?:throws\s+[\w\s,<>.?]+)?\s*\{/g;
-
-	let match: RegExpExecArray | null;
-	while ((match = methodRegex.exec(sourceCode)) !== null) {
-		const name = match[1];
-
-		// Skip common control-flow keywords accidentally matched
-		if (['if', 'for', 'while', 'switch', 'catch', 'do', 'try', 'else'].includes(name)) {
-			continue;
+			for (const child of symbol.children) {
+				visit(child);
+			}
+		} else {
+			if (symbol.kind === vscode.SymbolKind.Method) {
+				results.push({
+					name: symbol.name,
+					kind: 'method',
+					line: symbol.location.range.start.line
+				});
+			} else if (symbol.kind === vscode.SymbolKind.Constructor) {
+				results.push({
+					name: symbol.name,
+					kind: 'constructor',
+					line: symbol.location.range.start.line
+				});
+			}
 		}
-
-		names.push(name);
 	}
 
-	return names;
+	for (const symbol of symbols) {
+		visit(symbol);
+	}
+
+	return results;
 }
