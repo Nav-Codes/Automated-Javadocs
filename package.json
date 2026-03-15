@@ -7,7 +7,7 @@
   "name": "automated-javadocs",
   "displayName": "Automated Javadocs",
   "description": "Gone are the days of manually typing Javadoc comments for your methods! Automated Javadocs is a VSCode plugin that automates the process of writing Javadoc comments. Just run 'Automated Javadocs: Inject Javadocs' in the Command Palette, and watch the magic unfold!",
-  "version": "0.1.67",
+  "version": "0.2.67",
   "engines": {
     "vscode": "^1.110.0"
   },
