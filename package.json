@@ -14,8 +14,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "automated-javadocs.scanWithSymbols",
-        "title": "Add Javadocs"
+        "command": "automated-javadocs.injectJavadocs",
+        "title": "Automated Javadocs: Inject Javadocs"
       }
     ]
   },
