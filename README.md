@@ -1,71 +1,214 @@
-# automated-javadocs README
+# Automated Javadocs
 
-This is the README for your extension "automated-javadocs". After writing up a brief description, we recommend including the following sections.
+**Automated Javadocs** is a VS Code extension that automatically generates **Javadoc comments for Java methods and constructors using AI.**
 
-## Features
+Instead of manually writing documentation, the extension analyzes your Java file, sends the relevant information to an AI backend, and inserts fully formatted Javadoc blocks directly into your code.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+The extension detects:
 
-For example if there is an image subfolder under your extension project workspace:
+- methods
+- constructors
+- parameters
+- return values
+- declared exceptions
 
-\!\[feature X\]\(images/feature-x.png\)
+And generates documentation including:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- method descriptions
+- `@param` descriptions
+- `@return` descriptions
+- `@throws` descriptions
 
-## Requirements
+#
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+# Features
 
-## Extension Settings
+## Automatic Javadoc Generation
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+Automatically generate Javadocs for every method and constructor in a Java file.
 
-For example:
+The extension:
 
-This extension contributes the following settings:
+1. Scans the Java file using the VS Code Java language server
+2. Extracts method signatures
+3. Sends the file and signatures to the backend AI service
+4. Receives structured documentation
+5. Inserts Javadoc blocks above each method
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Example
 
-## Known Issues
+**Before**
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+```java
+public String getName() {
+    return name;
+}
+```
 
-## Release Notes
+ **After running** `Automated Javadocs: Inject Javadocs`
 
-Users appreciate release notes as you update your extension.
+ ```java
+/**
+ * Returns the current name.
+ * @return the name associated with this object
+ */
+public String getName() {
+    return name;
+}
+ ```
 
-### 1.0.0
+ Parameter Documentation
+-----------------------
 
-Initial release of ...
+Parameters are automatically documented.
 
-### 1.0.1
+```java
+/**
+ * Updates the user's name.
+ * @param name the new name to assign
+ */
+public void setName(String name) {
+    this.name = name;
+}
+```
 
-Fixed issue #.
+Exception Documentation
+-----------------------
 
-### 1.1.0
+Declared exceptions are documented.
+```java
+/**
+ * Parses a configuration file.
+ * @param path the file path to read
+ * @throws IOException if the file cannot be read
+ */
+public void loadConfig(String path) throws IOException {}
+```
 
-Added features X, Y, and Z.
+Skips Existing Javadocs
+-----------------------
 
----
+The extension **does not overwrite existing documentation.**
 
-## Following extension guidelines
+If a method already has a Javadoc block, it will be skipped.
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+Architecture
+============
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+The extension uses a **secure backend architecture**.
 
-## Working with Markdown
+```
+VS Code Extension
+       │
+       │ HTTP request
+       ▼
+Backend Service (Node.js / Express)
+       │
+       │ OpenAI API request
+       ▼
+OpenAI Responses API
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+```
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+This design prevents the **OpenAI API key from being exposed in the VS Code extension.**
 
-## For more information
+The extension sends:
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+*   The full Java file
+    
+*   Detected method signatures
+    
 
-**Enjoy!**
+The backend returns **structured documentation for each method**.
+
+Requirements
+============
+
+The extension requires the following:
+
+Java Language Support in VS Code
+--------------------------------
+
+You must install the Java extension pack:
+
+**Extension Pack for Java**
+
+[https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)
+
+This provides the language server used to detect methods and constructors.
+
+*Alternatatively, you can install just the official language support extension from RedHat if you don't want to install the entire Java extention pack*
+
+***Java Language Support from RedHat***
+
+https://marketplace.visualstudio.com/items?itemName=redhat.java
+
+How to Use
+==========
+   
+1.  Open a Java file in VS Code
+    
+2.  Open the command palette:
+    - `Ctrl + Shift + P`
+
+1.  Run:
+    - `Automated Javadocs: Inject Javadocs`
+
+The extension will:
+
+*   Analyze the Java file
+    
+*   Generate documentation
+    
+*   Insert Javadoc blocks automatically
+
+Known Issues
+============
+
+Java Extension Required
+-----------------------
+
+If Java language support is not installed, the extension cannot detect methods.
+
+Large Files
+-----------
+
+Very large Java files may take longer to process due to AI request time.
+
+Release Notes
+=============
+
+1.0.0
+-----
+
+Initial release of **Automated Javadocs**.
+
+Features include:
+
+*   automatic detection of Java methods and constructors
+    
+*   AI-generated Javadoc comments
+    
+*   parameter, return, and exception documentation
+    
+*   backend architecture for secure API usage
+    
+
+Development
+===========
+
+The extension is organized into several modules:
+
+```
+src/
+  extension.ts        → VS Code command logic
+  javaParser.ts       → Java method detection and parsing
+  javadocGenerator.ts → Javadoc rendering and insertion
+  openai.ts           → backend API client
+``` 
+
+Backend
+-------
+The backend implementation can be found here:
+
+https://github.com/Nav-Codes/Automated-Javadocs-Backend
