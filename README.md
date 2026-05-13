@@ -1,6 +1,6 @@
 # Automated Javadocs
 
-**Automated Javadocs** is a VS Code extension that automatically generates **Javadoc comments for Java methods and constructors using AI.**
+Automated Javadocs is a VS Code extension that automatically generates Javadoc comments for Java methods and constructors using AI.
 
 Instead of manually writing documentation, the extension analyzes your Java file, sends the relevant information to an AI backend, and inserts fully formatted Javadoc blocks directly into your code.
 
@@ -220,3 +220,64 @@ Backend
 The backend implementation can be found here:
 
 https://github.com/Nav-Codes/Automated-Javadocs-Backend
+
+Privacy Policy 
+==============
+
+The Automated Javadocs Visual Studio Code extension processes Java source code in order to generate or improve Javadoc comments for users.
+
+By using this extension, you acknowledge and agree that portions of your source code — including the entire Java file currently being edited — may be transmitted to and processed by the publisher’s servers or third-party AI service providers to provide the extension’s functionality.
+
+Information Collected
+---------------------
+
+When the extension is active, the following information may be collected and processed:
+
+- The full contents of the Java file currently being edited
+- Existing Javadoc comments and source code structure
+- Class names, method names, variable names, and implementation details
+- Extension usage and diagnostic information
+
+Purpose of Data Processing
+--------------------------
+
+The collected code is used solely for purposes related to the extension’s functionality, including:
+
+- Generating Javadoc comments
+- Improving documentation quality
+- Debugging and improving extension performance
+- Monitoring service reliability and abuse prevention
+
+Code Visibility
+---------------
+
+The publisher of the extension may technically be able to view, store, process, or analyze the Java source code submitted through the extension, including proprietary or confidential code contained in the edited file.
+
+**Users should avoid using the extension on sensitive, confidential, regulated, or proprietary source code unless they are authorized to share such code with external services.**
+
+Third-Party Services
+--------------------
+
+The extension may use third-party APIs or AI providers to generate documentation. Submitted code may therefore be transmitted to external service providers for processing.
+
+These providers may have their own privacy policies and data handling practices.
+
+Data Retention
+--------------
+
+Source code and related data may be temporarily stored for operational, debugging, logging, security, or service improvement purposes. The publisher does not guarantee immediate deletion of submitted content unless explicitly stated elsewhere.
+
+Security
+--------
+
+Reasonable efforts are made to protect transmitted data; however, no method of electronic transmission or storage is completely secure.
+
+User Responsibility
+-------------------
+
+Users are responsible for ensuring that their use of the extension complies with their organization’s policies, confidentiality obligations, and applicable laws.
+
+Contact
+-------
+
+For questions regarding this privacy statement or data handling practices, users may contact the publisher through the extension marketplace listing or associated repository.
